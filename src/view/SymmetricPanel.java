@@ -1,6 +1,8 @@
 package view;
 
+import controller.SymmetricController;
 import java.awt.*;
+import java.io.File;
 import javax.swing.*;
 
 public class SymmetricPanel extends JPanel {
@@ -8,18 +10,21 @@ public class SymmetricPanel extends JPanel {
     private JComboBox<String> algorithmOption;
     private JComboBox<String> modeOption;
     private JComboBox<String> paddingOption;
+    private JComboBox<String> sizeOption;
+
     private JTextArea inputText;
     private JTextArea outputText;
     private JTabbedPane inputTabbedPane;
     private JTextField filePathField;
+
     private JButton browseButton;
     private JButton encryptBtn;
     private JButton decryptBtn;
-    private JButton generateKeyBtn;
-    private JButton loadKeyBtn;
     private JButton saveKeyBtn;
+    private JButton encryptFileBtn, decryptFileBtn;
 
     private JTextField keyField;
+    private JTextField enterKeyField;
     private JButton createKeyBtn;
 
     public SymmetricPanel() {
@@ -33,7 +38,8 @@ public class SymmetricPanel extends JPanel {
         // Options
         algorithmOption = new JComboBox<>(new String[]{"AES", "DES", "3DES", "Blowfish"});
         modeOption = new JComboBox<>(new String[]{"ECB", "CBC", "CFB", "OFB"});
-        paddingOption = new JComboBox<>(new String[]{"PKCS5Padding", "NoPadding"});
+        paddingOption = new JComboBox<>(new String[]{"PKCS5Padding", "PKCS7Padding", "ISO10126Padding", "NoPadding"});
+        sizeOption = new JComboBox<>(new String[]{"56", "128", "256", "512"});
 
         // Input/Output
         inputText = new JTextArea();
@@ -49,12 +55,13 @@ public class SymmetricPanel extends JPanel {
         // Buttons
         encryptBtn = new JButton("Mã hóa");
         decryptBtn = new JButton("Giải mã");
-        generateKeyBtn = new JButton("Tạo khóa");
-        loadKeyBtn = new JButton("Nạp khóa");
         saveKeyBtn = new JButton("Lưu khóa");
+        encryptFileBtn = new JButton("Mã hóa File");
+        decryptFileBtn = new JButton("Giải mã File");
 
         // Key components
         keyField = new JTextField(20);
+        enterKeyField = new JTextField(20);
         createKeyBtn = new JButton("Tạo Khóa Mới");
     }
 
@@ -78,7 +85,7 @@ public class SymmetricPanel extends JPanel {
         labelPanel.add(titlePanel);
 
         // Options Panel
-        JPanel optionsPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        JPanel optionsPanel = new JPanel(new GridLayout(4, 2, 5, 5)); // Changed from 3 to 4 rows
         optionsPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder("Tùy chọn"),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)));
@@ -89,6 +96,8 @@ public class SymmetricPanel extends JPanel {
         optionsPanel.add(modeOption);
         optionsPanel.add(new JLabel("Padding: "));
         optionsPanel.add(paddingOption);
+        optionsPanel.add(new JLabel("Size Key (Bytes): "));
+        optionsPanel.add(sizeOption);
 
         // Text Input Panel
         JPanel textInputPanel = new JPanel(new BorderLayout());
@@ -126,8 +135,8 @@ public class SymmetricPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
         buttonPanel.add(encryptBtn);
         buttonPanel.add(decryptBtn);
-        buttonPanel.add(generateKeyBtn);
-        buttonPanel.add(loadKeyBtn);
+        buttonPanel.add(encryptFileBtn);
+        buttonPanel.add(decryptFileBtn);
         buttonPanel.add(saveKeyBtn);
 
         // Main Layout
@@ -143,9 +152,12 @@ public class SymmetricPanel extends JPanel {
         // Key Input Panel
         JPanel keyInputPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         keyInputPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        keyInputPanel.add(new JLabel("Nhập Khóa: "));
+        keyInputPanel.add(new JLabel("Secret Key: "));
         keyInputPanel.add(keyField);
         keyInputPanel.add(createKeyBtn);
+
+        keyInputPanel.add(new JLabel("Enter Key:"));
+        keyInputPanel.add(enterKeyField);
 
         // Add key input panel to the main layout
         topPanel.add(keyInputPanel, BorderLayout.SOUTH);
@@ -159,10 +171,166 @@ public class SymmetricPanel extends JPanel {
     }
 
     private void setupListeners() {
+
+        // Generate Secret Key.
         createKeyBtn.addActionListener(e -> {
-            String newKey = utils.KeyGenerator.generateNewKey();
-            keyField.setText(newKey);
-            JOptionPane.showMessageDialog(this, "Khóa mới đã được tạo: " + newKey);
+            String alg = (String) algorithmOption.getSelectedItem();
+            String keySize = (String) sizeOption.getSelectedItem();
+            String enteredKey = enterKeyField.getText().trim();
+            try {
+                SymmetricController controller = new SymmetricController(alg, keySize, enteredKey);
+                String keyText = controller.generateKey(alg, keySize);
+                keyField.setText(keyText);
+                JOptionPane.showMessageDialog(this, "Khóa mới đã được tạo: " + keyText);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Encrypt Text Button Event. 
+        encryptBtn.addActionListener(e -> {
+            String enteredKey = enterKeyField.getText().trim();
+
+            if (enteredKey.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập khóa để mã hóa.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            } else {
+                try {
+                    String alg = (String) algorithmOption.getSelectedItem();
+                    String mode = (String) modeOption.getSelectedItem();
+                    String padding = (String) paddingOption.getSelectedItem();
+                    String input = inputText.getText();
+
+                    // Check for NoPadding
+                    if ("NoPadding".equals(padding) && (input.length() % 16 != 0)) {
+                        JOptionPane.showMessageDialog(this, "Input length must be a multiple of 16 bytes when using NoPadding.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    SymmetricController controller = new SymmetricController(alg, sizeOption.getSelectedItem().toString(), enteredKey);
+                    String encryptedText = controller.encrypt(alg, mode, padding, input);
+                    outputText.setText(encryptedText);
+
+                    if (outputText.getText().equals(encryptedText)) {
+                        JOptionPane.showMessageDialog(this, "Mã hóa thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                    }
+
+                    // Open file
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Decrypt Text Button Event.
+        decryptBtn.addActionListener(e -> {
+            String enteredKey = enterKeyField.getText().trim();
+
+            if (enteredKey.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập khóa để mã hóa.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            } else {
+                try {
+                    String alg = (String) algorithmOption.getSelectedItem();
+                    String mode = (String) modeOption.getSelectedItem();
+                    String padding = (String) paddingOption.getSelectedItem();
+                    String input = inputText.getText();
+
+                    // Debugging information
+                    System.out.println("Decrypting with:");
+                    System.out.println("Algorithm: " + alg);
+                    System.out.println("Mode: " + mode);
+                    System.out.println("Padding: " + padding);
+                    System.out.println("Input: " + input);
+                    System.out.println("Entered Key: " + enteredKey);
+
+                    SymmetricController controller = new SymmetricController(alg, sizeOption.getSelectedItem().toString(), enteredKey);
+                    String decryptedText = controller.decrypt(alg, mode, padding, input);
+                    outputText.setText(decryptedText);
+
+                    if (outputText.getText().equals(decryptedText)) {
+                        JOptionPane.showMessageDialog(this, "Giải mã thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Encrypt File Button Event.
+        encryptFileBtn.addActionListener(e -> {
+            String enteredKey = enterKeyField.getText().trim();
+            if (enteredKey.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập khóa để mã hóa.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            } else {
+                try {
+                    String alg = (String) algorithmOption.getSelectedItem();
+                    String mode = (String) modeOption.getSelectedItem();
+                    String padding = (String) paddingOption.getSelectedItem();
+
+                    JFileChooser fileChooser = new JFileChooser();
+                    fileChooser.setDialogTitle("Chọn file để mã hóa");
+                    int userSelection = fileChooser.showOpenDialog(this);
+
+                    if (userSelection == JFileChooser.APPROVE_OPTION) {
+                        File inputFile = fileChooser.getSelectedFile();
+
+                        JFileChooser outputFileChooser = new JFileChooser();
+                        outputFileChooser.setDialogTitle("Chọn file để lưu kết quả mã hóa");
+                        int outputSelection = outputFileChooser.showSaveDialog(this);
+
+                        if (outputSelection == JFileChooser.APPROVE_OPTION) {
+                            File outputFile = outputFileChooser.getSelectedFile();
+
+                            if (!outputFile.exists()) {
+                                outputFile.createNewFile();
+                            }
+                            SymmetricController controller = new SymmetricController(alg, sizeOption.getSelectedItem().toString(), enteredKey);
+                            controller.encryptFile(alg, mode, padding, inputFile, outputFile); // Mã hóa file
+                            JOptionPane.showMessageDialog(this, "Mã hóa thành công! Kết quả đã được lưu vào: " + outputFile.getAbsolutePath(), "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Decrypt File Button Event
+        decryptFileBtn.addActionListener(e -> {
+            String enteredKey = enterKeyField.getText().trim();
+            if (enteredKey.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập khóa để giải mã.", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            } else {
+                try {
+                    String alg = (String) algorithmOption.getSelectedItem();
+                    String mode = (String) modeOption.getSelectedItem();
+                    String padding = (String) paddingOption.getSelectedItem();
+                    // Open file chooser to select input file for decryption
+                    JFileChooser fileChooser = new JFileChooser();
+                    fileChooser.setDialogTitle("Chọn file để giải mã");
+                    int userSelection = fileChooser.showOpenDialog(this);
+                    if (userSelection == JFileChooser.APPROVE_OPTION) {
+                        File inputFile = fileChooser.getSelectedFile(); // Chọn file đầu vào
+                        // Open file chooser to select output file for saving decrypted result
+                        JFileChooser outputFileChooser = new JFileChooser();
+                        outputFileChooser.setDialogTitle("Chọn file để lưu kết quả giải mã");
+                        int outputSelection = outputFileChooser.showSaveDialog(this);
+                        if (outputSelection == JFileChooser.APPROVE_OPTION) {
+                            File outputFile = outputFileChooser.getSelectedFile(); // Chọn file đầu ra
+                            // Kiểm tra xem file đầu ra có tồn tại không
+                            if (!outputFile.exists()) {
+                                // Nếu không tồn tại, tạo file mới
+                                outputFile.createNewFile();
+                            }
+                            // Giải mã file
+                            SymmetricController controller = new SymmetricController(alg, sizeOption.getSelectedItem().toString(), enteredKey);
+                            controller.decryptFile(alg, mode, padding, inputFile, outputFile); // Giải mã file
+                            JOptionPane.showMessageDialog(this, "Giải mã thành công! Kết quả đã được lưu vào: " + outputFile.getAbsolutePath(), "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         });
 
         browseButton.addActionListener(e -> {

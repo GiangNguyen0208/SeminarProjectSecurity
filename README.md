@@ -15,3 +15,7 @@ Thao tác với file và văn bản.
 Yêu cầu thêm:
 - Mã hóa đối xứng và bất đối xứng cho phép người dùng tạo key với chiều dài mà giải thuật hỗ trợ (Nếu người dùng có key sẵn thì nhập, không thì có tạo key).
 - Cho phép lưu key về máy người dùng. (Key ở đây có thể là file, base64,..).
+
+
+
+sizeOption = new JComboBox<>(new String[]{"128", "256", "512"});
