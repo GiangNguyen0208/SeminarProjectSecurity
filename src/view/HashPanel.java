@@ -9,7 +9,7 @@ public class HashPanel extends JPanel {
     private JComboBox<String> algorithmOption;
 
     private JTextArea inputText, inputVerifyText;
-    private JTextArea outputText;
+    private JTextArea outputText, outputVerifyText;
     private JTabbedPane inputTabbedPane;
     private JTabbedPane verifyTabbedPane;
     private JTextField filePathField;
@@ -33,8 +33,10 @@ public class HashPanel extends JPanel {
         // Input/Output
         inputText = new JTextArea();
         outputText = new JTextArea();
+        outputVerifyText = new JTextArea();
         inputVerifyText = new JTextArea();
         outputText.setEditable(false);
+        outputVerifyText.setEditable(false);
         inputTabbedPane = new JTabbedPane();
         verifyTabbedPane = new JTabbedPane();
 
@@ -51,6 +53,7 @@ public class HashPanel extends JPanel {
         encryptFileBtn = new JButton("Mã hóa file");
         verifyBtn = new JButton("Verify Text");
         verifyFileBtn = new JButton("Verify File");
+
     }
 
     private void setupLayout() {
@@ -103,6 +106,9 @@ public class HashPanel extends JPanel {
         fileInputPanel.add(new JScrollPane(filePreview), BorderLayout.CENTER);
 
         // Setup Input Tabs
+        inputTabbedPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Input"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
         inputTabbedPane.addTab("Văn bản", textInputPanel);
         inputTabbedPane.addTab("File", fileInputPanel);
 
@@ -143,6 +149,13 @@ public class HashPanel extends JPanel {
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)));
         outputPanel.add(new JScrollPane(outputText), BorderLayout.CENTER);
 
+        // Output Verify Panel
+        JPanel outputVerifyPanel = new JPanel(new BorderLayout());
+        outputVerifyPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Kết quả Verify"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+        outputVerifyPanel.add(new JScrollPane(outputVerifyText), BorderLayout.CENTER);
+
         // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
         buttonPanel.add(encryptBtn);
@@ -151,10 +164,11 @@ public class HashPanel extends JPanel {
         buttonPanel.add(verifyFileBtn);
 
         // Main Layout
-        JPanel centerPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 10, 10));
         centerPanel.add(inputTabbedPane);
         centerPanel.add(outputPanel);
         centerPanel.add(verifyTabbedPane);
+        centerPanel.add(outputVerifyPanel);
 
         // Add to main panel
         JPanel topPanel = new JPanel(new BorderLayout());
@@ -233,10 +247,10 @@ public class HashPanel extends JPanel {
                     boolean verify = controller.verifyPlainText(input, inputVerify);
                     if (verify) {
                         JOptionPane.showMessageDialog(this, "Thông tin chính xác", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-                        outputText.setText(valid);
+                        outputVerifyText.setText(valid);
                     } else {
                         JOptionPane.showMessageDialog(this, "Thông tin sai lệch", "Thông báo", JOptionPane.WARNING_MESSAGE);
-                        outputText.setText(inValid);
+                        outputVerifyText.setText(inValid);
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
@@ -258,12 +272,12 @@ public class HashPanel extends JPanel {
                     String valid = "FILE HỢP LỆ !!!";
                     String inValid = "FILE KHÔNG HỢP LỆ !!!";
                     boolean verify = controller.verifyFile(file, fileVerify);
-                    if (verify) {
+                    if (verify == true) {
                         JOptionPane.showMessageDialog(this, "Thông tin chính xác", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-                        outputText.setText(valid);
+                        outputVerifyText.setText(valid);
                     } else {
                         JOptionPane.showMessageDialog(this, "Thông tin sai lệch", "Thông báo", JOptionPane.WARNING_MESSAGE);
-                        outputText.setText(inValid);
+                        outputVerifyText.setText(inValid);
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);

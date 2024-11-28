@@ -25,7 +25,7 @@ public class SymmetricPanel extends JPanel {
 
     private JTextField keyField;
     private JTextField enterKeyField;
-    private JButton createKeyBtn;
+    private JButton createKeyBtn, loadKeyBtn;
 
     public SymmetricPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -56,6 +56,7 @@ public class SymmetricPanel extends JPanel {
         encryptBtn = new JButton("Mã hóa");
         decryptBtn = new JButton("Giải mã");
         saveKeyBtn = new JButton("Lưu khóa");
+        loadKeyBtn = new JButton("Load Key");
         encryptFileBtn = new JButton("Mã hóa File");
         decryptFileBtn = new JButton("Giải mã File");
 
@@ -137,7 +138,9 @@ public class SymmetricPanel extends JPanel {
         buttonPanel.add(decryptBtn);
         buttonPanel.add(encryptFileBtn);
         buttonPanel.add(decryptFileBtn);
+        buttonPanel.add(createKeyBtn);
         buttonPanel.add(saveKeyBtn);
+        buttonPanel.add(loadKeyBtn);
 
         // Main Layout
         JPanel centerPanel = new JPanel(new GridLayout(2, 1, 10, 10));
@@ -154,9 +157,8 @@ public class SymmetricPanel extends JPanel {
         keyInputPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         keyInputPanel.add(new JLabel("Secret Key: "));
         keyInputPanel.add(keyField);
-        keyInputPanel.add(createKeyBtn);
 
-        keyInputPanel.add(new JLabel("Enter Key:"));
+        keyInputPanel.add(new JLabel("Load Key:"));
         keyInputPanel.add(enterKeyField);
 
         // Add key input panel to the main layout
@@ -171,6 +173,55 @@ public class SymmetricPanel extends JPanel {
     }
 
     private void setupListeners() {
+
+        // Load Key
+        loadKeyBtn.addActionListener(e -> {
+            {
+                try {
+                    // Open a file chooser to select the file to load the private key
+                    JFileChooser fileChooser = new JFileChooser();
+                    int result = fileChooser.showOpenDialog(this);
+
+                    if (result == JFileChooser.APPROVE_OPTION) {
+                        String path = fileChooser.getSelectedFile().getAbsolutePath();
+                        // Read the private key from the selected file
+                        String keySec = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+                        enterKeyField.setText(keySec); // Set the loaded key to the loadKeyField
+                        JOptionPane.showMessageDialog(this, "Secret key loaded successfully!", "Anounce", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error Anounce", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Save Key 
+        saveKeyBtn.addActionListener(e -> {
+            if (keyField.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Public Key null!", "Anounce", JOptionPane.WARNING_MESSAGE);
+            } else {
+                try {
+                    // Open a file chooser to select the file to save the private key
+                    JFileChooser fileChooser = new JFileChooser();
+                    int result = fileChooser.showSaveDialog(this);
+
+                    if (result == JFileChooser.APPROVE_OPTION) {
+                        String path = fileChooser.getSelectedFile().getAbsolutePath();
+                        String alg = algorithmOption.getSelectedItem().toString();
+                        String keySize = sizeOption.getSelectedItem().toString();
+                        String enteredKey = enterKeyField.getText().trim();
+                        SymmetricController controller = new SymmetricController(alg, keySize, enteredKey);
+                        String keySec = controller.generateKey(alg, keySize);
+                        // Save the private key to the selected file, overwriting existing content
+                        java.nio.file.Files.write(java.nio.file.Paths.get(path), keySec.getBytes(),
+                                java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+                        JOptionPane.showMessageDialog(this, "Saved Secret key successfully!", "Anounce", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error Anounce", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
 
         // Generate Secret Key.
         createKeyBtn.addActionListener(e -> {

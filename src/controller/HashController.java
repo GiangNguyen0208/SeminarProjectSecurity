@@ -42,7 +42,6 @@ public class HashController {
             this.bigInteger = new BigInteger(1, this.digestInputStream.getMessageDigest().digest());
             return this.bigInteger.toString(16);
         } catch (Exception e) {
-            e.printStackTrace();
             throw new Exception(e.getMessage());
         }
     }

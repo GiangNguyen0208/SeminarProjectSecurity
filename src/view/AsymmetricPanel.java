@@ -19,9 +19,10 @@ public class AsymmetricPanel extends JPanel {
     private JButton encryptBtn;
     private JButton decryptBtn;
     private JButton saveKeyBtn;
+    private JButton loadKeyBtn;
+    private JButton createKeyPair;
 
     private JTextField keyPulicField, keyPrivateField;
-    private JButton createKeyPair;
 
     public AsymmetricPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -51,11 +52,12 @@ public class AsymmetricPanel extends JPanel {
         encryptBtn = new JButton("Mã hóa");
         decryptBtn = new JButton("Giải mã");
         saveKeyBtn = new JButton("Lưu khóa");
+        loadKeyBtn = new JButton("Load Key");
+        createKeyPair = new JButton("Tạo Cặp Khóa mới.");
 
         // Key components
         keyPulicField = new JTextField(20);
         keyPrivateField = new JTextField(20);
-        createKeyPair = new JButton("Tạo Cặp Khóa mới.");
     }
 
     private void setupLayout() {
@@ -127,6 +129,8 @@ public class AsymmetricPanel extends JPanel {
         buttonPanel.add(encryptBtn);
         buttonPanel.add(decryptBtn);
         buttonPanel.add(saveKeyBtn);
+        buttonPanel.add(loadKeyBtn);
+        buttonPanel.add(createKeyPair);
 
         // Main Layout
         JPanel centerPanel = new JPanel(new GridLayout(2, 1, 10, 10));
@@ -143,9 +147,8 @@ public class AsymmetricPanel extends JPanel {
         keyInputPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         keyInputPanel.add(new JLabel("Public Key: "));
         keyInputPanel.add(keyPulicField);
-        keyInputPanel.add(new JLabel("Private Key: "));
+        keyInputPanel.add(new JLabel("Load Key: "));
         keyInputPanel.add(keyPrivateField);
-        keyInputPanel.add(createKeyPair);
 
         topPanel.add(keyInputPanel, BorderLayout.SOUTH);
 
@@ -159,6 +162,53 @@ public class AsymmetricPanel extends JPanel {
 
     private void setupListeners() {
 
+        // Load Key
+        loadKeyBtn.addActionListener(e -> {
+            try {
+                // Open a file chooser to select the file to load the private key
+                JFileChooser fileChooser = new JFileChooser();
+                int result = fileChooser.showOpenDialog(this);
+
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    String path = fileChooser.getSelectedFile().getAbsolutePath();
+                    // Read the private key from the selected file
+                    String privateKey = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+                    keyPrivateField.setText(privateKey); // Set the loaded key to the loadKeyField
+                    JOptionPane.showMessageDialog(this, "Private key loaded successfully!", "Anounce", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error Anounce", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Save Key
+        saveKeyBtn.addActionListener(e -> {
+            if (keyPulicField.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Public Key null!", "Anounce", JOptionPane.WARNING_MESSAGE);
+            } else {
+                try {
+                    // Open a file chooser to select the file to save the private key
+                    JFileChooser fileChooser = new JFileChooser();
+                    int result = fileChooser.showSaveDialog(this);
+
+                    if (result == JFileChooser.APPROVE_OPTION) {
+                        String path = fileChooser.getSelectedFile().getAbsolutePath();
+                        String alg = algorithmOption.getSelectedItem().toString();
+                        String keySize = sizeOption.getSelectedItem().toString();
+                        AsymmetricController controller = new AsymmetricController(alg, keySize);
+
+                        String privateKey = controller.getPrivateKey();
+                        // Save the private key to the selected file, overwriting existing content
+                        java.nio.file.Files.write(java.nio.file.Paths.get(path), privateKey.getBytes(),
+                                java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+                        JOptionPane.showMessageDialog(this, "Private key saved successfully!", "Anounce", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error Anounce", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
         // Generate Public/Private Key Button Event.
         createKeyPair.addActionListener(e -> {
             try {
@@ -167,10 +217,8 @@ public class AsymmetricPanel extends JPanel {
 
                 AsymmetricController controller = new AsymmetricController(alg, size);
                 String publicKey = controller.getPublicKey();
-                String privateKey = controller.getPrivateKey();
 
                 keyPulicField.setText(publicKey);
-                keyPrivateField.setText(privateKey);
                 JOptionPane.showMessageDialog(this, "Tạo cặp khóa thành công!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Lỗi: " + ex.getMessage(), "Thông báo lỗi", JOptionPane.ERROR_MESSAGE);
